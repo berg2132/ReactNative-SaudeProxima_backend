@@ -1,0 +1,18 @@
+{
+  "name": "backend-saude-recife",
+  "version": "2.0.0",
+  "description": "Backend para o app de Unidades de Saúde do Recife - com check-in e feedback",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

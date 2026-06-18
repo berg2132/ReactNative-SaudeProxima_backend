@@ -1,0 +1,38 @@
+# ============================================================
+# docker-compose.yml
+# Sobe o backend Node.js e o MongoDB juntos com um único comando:
+#   docker-compose up
+# ============================================================
+
+version: '3.8'
+
+services:
+
+  # Banco de dados MongoDB
+  mongo:
+    image: mongo:7
+    container_name: saude-recife-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db    # Persiste os dados entre reinicializações
+    environment:
+      MONGO_INITDB_DATABASE: saudeRecifeDB
+
+  # Backend Node.js
+  backend:
+    build: ./backend
+    container_name: saude-recife-backend
+    restart: always
+    ports:
+      - "3333:3333"
+    environment:
+      MONGO_URI: mongodb://mongo:27017/saudeRecifeDB
+      PORT: 3333
+    depends_on:
+      - mongo    # Espera o MongoDB subir antes de iniciar
+
+# Volume nomeado para persistência do MongoDB
+volumes:
+  mongo_data:
