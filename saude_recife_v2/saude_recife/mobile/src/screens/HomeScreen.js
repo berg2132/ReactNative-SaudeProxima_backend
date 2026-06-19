@@ -25,7 +25,12 @@ import {
 import * as Location from 'expo-location';
 
 // Serviços separados para manter o componente limpo (princípio SRP)
-import { buscarTodasUnidades, filtrarPorProximidade } from '../services/dadosRecifeApi';
+import {
+  buscarTodasUnidades,
+  buscarServicosPorUnidade,
+  agruparUnidadesDuplicadas,
+  filtrarPorProximidade,
+} from '../services/dadosRecifeApi';
 import { salvarCheckin } from '../services/backendApi';
 
 // Raio de busca padrão: 10 km ao redor do usuário
@@ -99,7 +104,15 @@ export default function HomeScreen({ navigation }) {
   // Carrega e filtra unidades por proximidade do usuário
   // ============================================================
   const carregarUnidades = async (coords) => {
-    const todasUnidades = await buscarTodasUnidades();
+    // Busca as unidades "cruas" (uma linha por equipe) e os serviços em paralelo
+    const [todasUnidadesCruas, mapaServicos] = await Promise.all([
+      buscarTodasUnidades(),
+      buscarServicosPorUnidade(),
+    ]);
+
+    // Agrupa as unidades duplicadas (mesma US, equipes diferentes)
+    // e já anexa a lista de serviços oferecidos por cada uma.
+    const todasUnidades = agruparUnidadesDuplicadas(todasUnidadesCruas, mapaServicos);
 
     // Filtra apenas as que têm coordenadas e estão dentro do raio
     const proximas = filtrarPorProximidade(
@@ -123,7 +136,11 @@ export default function HomeScreen({ navigation }) {
 
   // Fallback: carrega sem filtro de distância (permissão negada)
   const carregarSemLocalizacao = async () => {
-    const todasUnidades = await buscarTodasUnidades();
+    const [todasUnidadesCruas, mapaServicos] = await Promise.all([
+      buscarTodasUnidades(),
+      buscarServicosPorUnidade(),
+    ]);
+    const todasUnidades = agruparUnidadesDuplicadas(todasUnidadesCruas, mapaServicos);
     setUnidades(todasUnidades.slice(0, 50));
   };
 
@@ -232,6 +249,17 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.infoCard}>🩺 Ponto de Apoio: {item.ponto_de_apoio}</Text>
         ) : null}
 
+        {/* Serviços oferecidos pela unidade (ex: Odontologia, Raio-X) */}
+        {item.servicos && item.servicos.length > 0 ? (
+          <View style={styles.servicosContainer}>
+            {item.servicos.map((servico, indice) => (
+              <View key={`${servico}-${indice}`} style={styles.tagServico}>
+                <Text style={styles.tagServicoTexto}>{servico}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         {/* Horário de funcionamento (campo 'horario' na API do Recife) */}
         {item.horario ? (
           <View style={styles.horarioBox}>
@@ -294,7 +322,9 @@ export default function HomeScreen({ navigation }) {
       ) : (
         <FlatList
           data={unidades}
-          keyExtractor={(item) => String(item._id || item.unidade)}
+          keyExtractor={(item, index) =>
+            `${item._id || item.unidade || 'unidade'}-${item.distrito || ''}-${index}`
+          }
           renderItem={renderItem}
           refreshControl={
             <RefreshControl refreshing={atualizando} onRefresh={aoAtualizar} colors={['#1976D2']} />
@@ -425,6 +455,23 @@ const styles = StyleSheet.create({
   tagTexto: { fontSize: 12, fontWeight: 'bold', color: '#333' },
   tituloCard: { fontSize: 16, fontWeight: 'bold', color: '#1A237E', marginBottom: 6 },
   infoCard: { fontSize: 13, color: '#555', marginBottom: 2 },
+  servicosContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    gap: 6,
+  },
+  tagServico: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 6,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#A5D6A7',
+  },
+  tagServicoTexto: { fontSize: 12, color: '#2E7D32', fontWeight: '600' },
   horarioBox: {
     backgroundColor: '#E3F2FD',
     borderRadius: 6,
