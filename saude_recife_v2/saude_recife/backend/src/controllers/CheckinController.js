@@ -74,10 +74,6 @@ module.exports = {
   // ==========================================================
   async create(req, res) {
     try {
-      // 🐛 LOG TEMPORÁRIO DE DEBUG — remover depois de identificar o problema
-      console.log('🐛 [DEBUG] req.body recebido:', JSON.stringify(req.body));
-      console.log('🐛 [DEBUG] typeof avaliacao:', typeof req.body.avaliacao, '| valor:', req.body.avaliacao);
-
       // Desestrutura todos os campos esperados do corpo da requisição
       const {
         localNome,
@@ -112,13 +108,11 @@ module.exports = {
         distrito: distrito || 'Não informado',
         area: area || 'Não informado',
         telefone: telefone || 'Não informado',
-        avaliacao: avaliacao || null,
+        avaliacao: avaliacao === undefined || avaliacao === null ? null : avaliacao,
         feedback: feedback || '',
       });
 
       // Retorna o documento criado com status 201 (Created)
-      // 🐛 LOG TEMPORÁRIO DE DEBUG — remover depois de identificar o problema
-      console.log('🐛 [DEBUG] Documento salvo no Mongo:', JSON.stringify(novoCheckin));
       return res.status(201).json(novoCheckin);
 
     } catch (error) {
